@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# 计费系统登录用户名
+USER="your_username"
+# 计费系统登录口令
+PASS="your_password"
+# 计费网关IP地址
+GATE="your_gate_ip"
+# 为避免计费系统在用户没有活动流量的情况下自动将用户下线
+# 需要定期 ping 某个外网 IP 地址来产生活动流量
+EXP_IP="your_outside_ip"
+
+
+RETVAL=0
+URL_IN="http://${GATE}"
+URL_OUT="http://${GATE}/F.html"
+AGENT="Mozilla/4.0"
+EXPDATA="ping -q -i 300 ${EXP_IP}"
+
+start() {
+	ps -ef | grep "$EXPDATA" | grep -v grep | awk '{print $2}' | xargs kill -9 >/dev/null 2>&1
+	curl -s -A "$AGENT" -d DDDDD=$USER -d upass=$PASS -d 0MKKey="" $URL_IN > /dev/null
+	nohup $EXPDATA >/dev/null 2>&1 &
+}
+
+stop() {
+	curl -s -A "$AGENT" $URL_OUT > /dev/null
+	ps -ef | grep "$EXPDATA" | grep -v grep | awk '{print $2}' | xargs kill -9 >/dev/null 2>&1
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop) 
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart|reload}"
+	exit 1
+esac
+
+exit $RETVAL
